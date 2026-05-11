@@ -58,22 +58,22 @@ def process_image():
                 # Get coordinates as integers (x1, y1, x2, y2)
                 x1, y1, x2, y2 = map(int, box.xyxy[0])
 
-                # center_x = (x1 + x2) // 2
-                # center_y = (y1 + y2) // 2
+                center_x = (x1 + x2) // 2
+                center_y = (y1 + y2) // 2
+
+                depth_value = depth[center_y, center_x]
+
+                # min_value = float("inf")
                 #
-                # depth_value = depth[center_y, center_x]
-
-                min_value = float("inf")
-
-                for y in range(y1, y2):
-                    for x in range(x1, x2):
-                        if depth[y, x] < min_value:
-                            min_value = depth[y, x]
+                # for y in range(y1, y2):
+                #     for x in range(x1, x2):
+                #         if depth[y, x] < min_value:
+                #             min_value = depth[y, x]
 
                 cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
                 # Optional: Add label
-                label = f"{model_yolo.names[int(box.cls[0])]} {float(box.conf):.2f} Depth: {min_value:.2f}"
+                label = f"{model_yolo.names[int(box.cls[0])]} {float(box.conf):.2f} Depth: {depth_value:.2f}m"
                 cv2.putText(
                     img,
                     label,

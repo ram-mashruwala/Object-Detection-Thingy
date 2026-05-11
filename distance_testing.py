@@ -1,6 +1,5 @@
-import sys
 import time
-from cv2.typing import MatLike
+import depth_pro
 from ultralytics import YOLO
 import cv2
 import matplotlib.pyplot as plt
@@ -8,35 +7,10 @@ import matplotlib.pyplot as plt
 # %%
 
 model = YOLO("yolo11l.pt")
+model_depth, transform = depth_pro.create_model_and_transforms()
+model_depth.eval()
 
 # %%
-
-
-def draw_boxes(frame: MatLike, results):
-    for result in results:
-        for box in result.boxes:
-            # Get coordinates (x1, y1, x2, y2)
-            x1, y1, x2, y2 = map(int, box.xyxy[0])
-
-            # Get class name and confidence
-            cls_id = int(box.cls[0])
-            label = f"{model.names[cls_id]} {box.conf[0]:.2f}"
-
-            # Draw rectangle and label using cv2
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-            cv2.putText(
-                frame,
-                label,
-                (x1, y1 - 10),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.5,
-                (0, 255, 0),
-                2,
-            )
-
-
-# %%
-
 
 # results = model.track(source=0, show=True)
 
@@ -48,33 +22,53 @@ if not cap.isOpened():
     raise IOError("Cannot open webcam")
 
 delay = 1
-ret, frame = cap.read()
-if not ret:
-    print("Failed to grab frame")
-    sys.exit(1)
+try:
+    while True:
+        start_time = time.time()
+        ret, frame = cap.read()
+        if not ret:
+            print("Failed to grab frame")
+            break
 
-print(frame)
-results = model(frame)
+        print(frame)
+        results = model(frame)
+        for result in results:
+            for box in result.boxes:
+                # Get coordinates (x1, y1, x2, y2)
+                x1, y1, x2, y2 = map(int, box.xyxy[0])
 
-draw_boxes(frame, results)
+                # Get class name and confidence
+                cls_id = int(box.cls[0])
+                label = f"{model.names[cls_id]} {box.conf[0]:.2f}"
 
-cv2.waitKey(1)
-cv2.imshow("", frame)
+                # Draw rectangle and label using cv2
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                cv2.putText(
+                    frame,
+                    label,
+                    (x1, y1 - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.5,
+                    (0, 255, 0),
+                    2,
+                )
 
-input("")
+        image = transform(frame)
 
-ret, frame = cap.read()
-if not ret:
-    print("Failed to grab frame")
-    sys.exit(1)
+        cv2.imshow("", frame)
+        cv2.waitKey(1)
 
-print(frame)
-results = model(frame)
+        # prediction = model_depth.infer(image, f_px=0.1)
+        # depth = prediction["depth"]  # Depth in [m].
+        # depth_np = depth.sqeeze().cpu().numpy()
+        # print(depth_np)
+        end_time = time.time()
+        # if end_time - start_time < delay:
+        #     time.sleep(delay - (end_time - start_time))
 
-draw_boxes(frame, results)
+except KeyboardInterrupt:
+    cap.release()
+    cv2.destroyAllWindows()
 
-cv2.waitKey(1)
-cv2.imshow("", frame)
-input("")
-cap.release()
-cv2.destroyAllWindows()
+
+# %%
